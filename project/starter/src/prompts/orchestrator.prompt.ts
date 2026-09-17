@@ -6,17 +6,28 @@ Follow this workflow exactly:
 1. Use the GitHub MCP pull_request_read tool to retrieve the pull request
    details, changed files, patches, and relevant metadata.
 
-2. For every changed source file, use the code-quality-analyzer agent to
-   analyze security, performance, maintainability, bug risks, and best
-   practices.
+2. For every changed file, you MUST invoke the
+code-quality-analyzer subagent using the Task tool.
 
-3. For every changed source file, use the test-coverage-analyzer agent to
-   compare source behavior with existing tests and identify missing
-   assertions, branches, error paths, and edge cases.
+3. For every changed file, you MUST invoke the
+test-coverage-analyzer subagent using the Task tool.
 
-4. For every changed source file, use the refactoring-suggester agent to
-   identify modernization, simplification, naming, extraction, and
-   pattern-improvement opportunities.
+4. For every changed file, you MUST invoke the
+refactoring-suggester subagent using the Task tool.
+
+5. DO NOT perform the specialist analysis yourself.
+All specialist analysis MUST be delegated through
+Task invocations.
+
+6. If no files are returned from GitHub MCP,
+return an explicit error instead of an empty report.
+
+7. A report with:
+- totalFiles = 0
+- fileReviews = []
+- recommendations = []
+
+is NOT acceptable unless GitHub MCP returned no files.
 
 The three specialist analyses are independent and should run in parallel
 where possible.

@@ -98,15 +98,23 @@ const result = query({
 
     permissionMode: 'bypassPermissions',
 
-    allowedTools: [
-      'Task',
-      'Read',
-      'Grep',
-      'Glob',
-      'Skill',
-      'mcp__github__pull_request_read',
-      'mcp__eslint__lint'
-    ],
+allowedTools: [
+  'Task',
+  'Read',
+  'Grep',
+  'Glob',
+  'Skill',
+
+  // Legacy GitHub MCP server tools
+  'mcp__github__get_pull_request',
+  'mcp__github__get_pull_request_files',
+  'mcp__github__get_file_contents',
+
+  // Newer GitHub MCP compatibility
+  'mcp__github__pull_request_read',
+
+  'mcp__eslint__lint'
+],
 
     agents: {
       'code-quality-analyzer': codeQualityAnalyzer,
@@ -123,15 +131,23 @@ const result = query({
   }
 });
 
-    for await (const message of result) {
-      if (
-        message.type === 'result' &&
-        'structured_output' in message &&
-        message.structured_output
-      ) {
-        structuredOutput = message.structured_output;
-      }
-    }
+for await (const message of result) {
+  console.log('\n====================');
+  console.log('MESSAGE TYPE:', message.type);
+  console.log(
+    JSON.stringify(message, null, 2)
+  );
+  console.log('====================\n');
+
+  if (
+    message.type === 'result' &&
+    'structured_output' in message &&
+    message.structured_output
+  ) {
+    structuredOutput = message.structured_output;
+  }
+}
+
 
     if (!structuredOutput) {
       throw new Error(
@@ -141,6 +157,8 @@ const result = query({
 
     const validation =
       ReviewReportSchema.safeParse(structuredOutput);
+
+      
 
     if (!validation.success) {
       const details = validation.error.issues
@@ -154,6 +172,34 @@ const result = query({
         `The generated review report failed schema validation: ${details}`
       );
     }
+
+    if (validation.data.fileReviews.length === 0) {
+  throw new Error(
+    `No changed files were analyzed for ${owner}/${repo}#${prNumber}. ` +
+    'Verify that the GitHub MCP retrieved the PR files and that all ' +
+    'three subagents were invoked.'
+  );
+}
+
+if (validation.data.summary.totalFiles !== validation.data.fileReviews.length) {
+  throw new Error(
+    'Invalid report: summary.totalFiles does not match fileReviews.length.'
+  );
+}
+
+const invalidAgentStates = Object.entries(
+  validation.data.metadata.agentVersions
+).filter(([, version]) =>
+  ['not-executed', 'not-run', 'error'].includes(version)
+);
+
+if (invalidAgentStates.length > 0) {
+  throw new Error(
+    `One or more subagents did not complete: ${
+      invalidAgentStates.map(([name, state]) => `${name}=${state}`).join(', ')
+    }`
+  );
+}
 
     return {
       ...validation.data,
