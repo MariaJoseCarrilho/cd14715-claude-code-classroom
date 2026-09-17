@@ -1,16 +1,10 @@
-import { refactoringSuggesterPrompt } from '../prompts/refactoring-suggester.prompt';
+import type { AgentDefinition } from '@anthropic-ai/claude-agent-sdk';
+import { refactoringSuggesterPrompt } from '../prompts/refactoring-suggester.prompt.js';
 
-export const refactoringSuggester = {
+export const refactoringSuggester: AgentDefinition = {
   description:
-    'Suggests refactoring opportunities, modernization improvements and cleaner architecture.',
-
+    'Identifies safe refactoring, modernization, simplification, naming, and design-pattern improvements in pull request files.',
   prompt: refactoringSuggesterPrompt,
-
   model: 'inherit',
-
-  tools: [
-    'Read',
-    'Grep',
-    'Glob'
-  ]
+  tools: ['Read', 'Grep', 'Glob', 'Skill']
 };
